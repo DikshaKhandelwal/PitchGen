@@ -5,6 +5,8 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_absolute_error, r2_score
 from xgboost import XGBRegressor
 import joblib
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # Load dataset
 file_path = "startup_growth_investment_data.csv"
@@ -114,3 +116,38 @@ joblib.dump(best_xgb, 'xgb_valuation_model2.pkl')
 joblib.dump(scaler, 'scaler_valuation2.pkl')
 
 print("✅ Model and scaler saved successfully!")
+
+# Visualizations
+# 1. Distribution of Valuation
+plt.figure(figsize=(10, 6))
+sns.histplot(df['Valuation (USD)'], kde=True, color='blue')
+plt.title('Distribution of Valuation (USD)')
+plt.xlabel('Valuation (USD)')
+plt.ylabel('Frequency')
+plt.show()
+
+# 2. Correlation Heatmap
+plt.figure(figsize=(12, 8))
+corr = df_encoded.corr()
+sns.heatmap(corr, annot=True, fmt=".2f", cmap='coolwarm')
+plt.title('Correlation Heatmap')
+plt.show()
+
+# 3. Actual vs Predicted Valuation
+plt.figure(figsize=(10, 6))
+plt.scatter(y_test, y_test_pred, alpha=0.5)
+plt.plot([min(y_test), max(y_test)], [min(y_test), max(y_test)], color='red', linestyle='--')
+plt.xlabel('Actual Valuation (log scale)')
+plt.ylabel('Predicted Valuation (log scale)')
+plt.title('Actual vs Predicted Valuation')
+plt.show()
+
+# 4. Feature Importance
+plt.figure(figsize=(10, 6))
+feature_importance = best_xgb.feature_importances_
+sorted_idx = np.argsort(feature_importance)
+plt.barh(range(len(sorted_idx)), feature_importance[sorted_idx], align='center')
+plt.yticks(range(len(sorted_idx)), np.array(X.columns)[sorted_idx])
+plt.xlabel('Feature Importance')
+plt.title('Feature Importance Plot')
+plt.show()
