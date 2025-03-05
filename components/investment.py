@@ -42,45 +42,65 @@ def show():
     # Choose search type
     search_type = st.radio("Search by:", ["Industry", "Business Name"])
 
+    if "search_results" not in st.session_state:
+        st.session_state.search_results = []  # Initialize storage
+
+    def store_top_10_results(search_type, search_query, result_df):
+        """Stores only the top 10 results in session state."""
+        top_10_results = result_df.head(10).to_dict()
+        st.session_state.search_results = [{
+            "Search Type": search_type,
+            "Search Query": search_query,
+            "Results": top_10_results
+        }]
+
     if search_type == "Industry":
         industry_name = st.text_input("Enter Industry Name:", "").strip().lower()
-        
+
         def get_investor_details_by_industry(industry_name):
             if not industry_name:
                 return None
             data = df[df["Industry"] == industry_name][["Investor", "Business Name", "InvestmentAmount in USD"]]
             return data.sort_values(by="InvestmentAmount in USD", ascending=False).reset_index(drop=True) if not data.empty else None
-        
+
         if st.button("Find Investors"):
             result_df = get_investor_details_by_industry(industry_name)
             if result_df is not None:
-                st.success(f"### Investors in **{industry_name.capitalize()}** Industry")
-                st.dataframe(result_df)  # Index removed
-                
+                result_df = result_df.head(10)  # Limit to top 10
+                st.success(f"### Top 10 Investors in **{industry_name.capitalize()}** Industry")
+                st.dataframe(result_df)
+
+                store_top_10_results("Industry", industry_name, result_df)
+
                 # Plot top investors
-                top_investors = result_df.groupby("Investor")["InvestmentAmount in USD"].sum().reset_index()
-                fig = px.bar(top_investors.sort_values(by="InvestmentAmount in USD", ascending=False)[:10], 
-                             x="Investor", y="InvestmentAmount in USD", title="Top 10 Investors")
+                fig = px.bar(result_df, x="Investor", y="InvestmentAmount in USD", title="Top 10 Investors")
                 st.plotly_chart(fig)
-                return result_df.to_string(index=False)
             else:
                 st.warning("No investors found for this industry.")
-                return ""
+
     elif search_type == "Business Name":
         business_name = st.text_input("Enter Business Name:", "").strip().lower()
-        
+
         def get_investor_details_by_business(business_name):
             if not business_name:
                 return None
             data = df[df["Business Name"] == business_name][["Investor", "Industry", "InvestmentAmount in USD"]]
             return data.sort_values(by="InvestmentAmount in USD", ascending=False).reset_index(drop=True) if not data.empty else None
-        
+
         if st.button("Find Investors"):
             result_df = get_investor_details_by_business(business_name)
             if result_df is not None:
-                st.success(f"### Investors for **{business_name.capitalize()}**")
-                st.dataframe(result_df)  # Index removed
-                return result_df.to_string(index=False)
+                result_df = result_df.head(10)  # Limit to top 10
+                st.success(f"### Top 10 Investors for **{business_name.capitalize()}**")
+                st.dataframe(result_df)
+
+                store_top_10_results("Business Name", business_name, result_df)
             else:
                 st.warning("No investors found for this business.")
-                return ""
+
+    # Display previous search (only the latest top 10 results)
+    if st.session_state.search_results:
+        st.subheader("Last Search Results (Top 10)")
+        last_search = st.session_state.search_results[0]
+        st.write(f"**{last_search['Search Type']} Search for:** {last_search['Search Query'].capitalize()}")
+        st.dataframe(pd.DataFrame(last_search["Results"]))

@@ -9,6 +9,10 @@ model = joblib.load("./xgb_valuation_model2.pkl")
 scaler = joblib.load("./scaler_valuation2.pkl")
 feature_columns = joblib.load("./feature_columns2.pkl")
 
+# Initialize session state for history
+if "valuation_history" not in st.session_state:
+    st.session_state.valuation_history = []
+
 def show():
     st.title("💰 Startup Valuation Predictor")
     st.write("Enter your startup details to estimate the valuation.")
@@ -77,6 +81,23 @@ def show():
     if st.button("Predict Valuation"):
         prediction = model.predict(input_data)[0]
         valuation = np.expm1(prediction)  # Convert log valuation back to original scale
+
         st.success(f"Estimated Valuation in {target_year}: ${valuation:,.2f}")
-        return valuation
-    return 0.0
+
+        # Save result in session state
+        st.session_state.valuation_history.append({
+            "Funding Rounds": funding_rounds,
+            "Year Founded": year_founded,
+            "Number of Investors": num_investors,
+            "Investment Amount": investment_amount,
+            "Growth Rate (%)": growth_rate * 100,
+            "Industry": industry,
+            "Country": country,
+            "Target Year": target_year,
+            "Predicted Valuation (USD)": f"${valuation:,.2f}"
+        })
+
+    # Display valuation history
+    if st.session_state.valuation_history:
+        st.subheader("📊 Valuation History")
+        st.table(pd.DataFrame(st.session_state.valuation_history))
