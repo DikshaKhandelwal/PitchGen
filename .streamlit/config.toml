@@ -1,0 +1,17 @@
+[server]
+headless = true
+port = 8501
+enableCORS = false
+
+[theme]
+base = "light"
+primaryColor = "#1b096b"  # Main button color
+secondaryBackgroundColor = "#dbeafe"  # Light blue background
+backgroundColor = "#f8f9fa"  # Light background
+textColor = "#1e3a8a"  # Dark blue text
+font = "serif"
+
+[hover]
+backgroundColor = "#1e0880"  # Hover color for buttons
+
+

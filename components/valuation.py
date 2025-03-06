@@ -14,21 +14,86 @@ if "valuation_history" not in st.session_state:
     st.session_state.valuation_history = []
 
 def show():
-    st.title("💰 Startup Valuation Predictor")
-    st.write("Enter your startup details to estimate the valuation.")
+    # Add custom styling
+    st.markdown("""
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap');
 
-    # User inputs
-    funding_rounds = st.number_input("Funding Rounds", min_value=1, step=1)
-    year_founded = st.number_input("Year Founded", min_value=1900, max_value=2025, step=1)
-    num_investors = st.number_input("Number of Investors", min_value=1, step=1)
-    investment_amount = st.number_input("Investment Amount (USD)", min_value=10000, step=10000)
-    growth_rate = st.number_input("Growth Rate (%)", min_value=0.0, step=0.1) / 100  # Convert to decimal format
-    industry = st.selectbox("Industry", ["AI", "Healthcare", "Finance", "E-commerce", "Other"])
-    country = st.selectbox("Country", ["USA", "India", "UK", "Germany", "Other"])
+        body {
+            font-family: 'Lora', serif;
+            font-size: 18px;
+        }
 
-    # Select prediction year (up to 20 years ahead)
-    current_year = datetime.now().year
-    target_year = st.number_input("Predict Valuation for Year", min_value=current_year, max_value=current_year + 20, value=current_year)
+        .stButton > button {
+            background-color: #1b096b;
+            color: white;
+            border-radius: 4px;
+            border: none;
+            padding: 12px 24px;
+            font-weight: 500;
+            font-size: 18px;
+        }
+        .stButton > button:hover {
+            background-color: #1e0880 !important;
+            color: white !important;
+            border: 1px solid white !important;
+        }
+        .stSelectbox > div > div {
+            border-radius: 4px;
+            background-color: #f1f5f9;
+        }
+        .stNumberInput > div > div > input {
+            border-radius: 4px;
+            background-color: #f1f5f9;
+        }
+        div[data-testid="stTable"] {
+            background-color: white;
+            border-radius: 8px;
+            padding: 10px;
+            border: 1px solid #e5e7eb;
+        }
+        div[data-testid="stTable"] td {
+            color: #1e3a8a;
+            font-size: 18px;
+        }
+        div.stSuccess {
+            background-color: #dbeafe;
+            color: #1e3a8a;
+            border: none;
+            padding: 20px;
+            border-radius: 8px;
+            font-size: 18px;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Header with styled container
+    st.markdown("""
+    <div style="background-color: white; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 20px;">
+        <h1 style="color: #1e3a8a; font-weight: 700; margin-bottom: 5px; font-size: 32px;">💰 Startup Valuation Predictor</h1>
+        <p style="color: #6b7280; font-size: 20px;">Enter your startup details to estimate the valuation.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Group inputs in styled containers
+    with st.container():
+        st.markdown('<div style="background-color: white; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb;">', unsafe_allow_html=True)
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            funding_rounds = st.number_input("Funding Rounds", min_value=1, step=1)
+            year_founded = st.number_input("Year Founded", min_value=1900, max_value=2025, step=1)
+            num_investors = st.number_input("Number of Investors", min_value=1, step=1)
+            investment_amount = st.number_input("Investment Amount (USD)", min_value=10000, step=10000)
+        
+        with col2:
+            growth_rate = st.number_input("Growth Rate (%)", min_value=0.0, step=0.1) / 100
+            industry = st.selectbox("Industry", ["AI", "Healthcare", "Finance", "E-commerce", "Other"])
+            country = st.selectbox("Country", ["USA", "India", "UK", "Germany", "Other"])
+            current_year = datetime.now().year
+            target_year = st.number_input("Predict Valuation for Year", min_value=current_year, max_value=current_year + 20, value=current_year)
+        
+        st.markdown('</div>', unsafe_allow_html=True)
 
     # Compute additional features based on target year
     startup_age = target_year - year_founded
@@ -77,12 +142,18 @@ def show():
     # Normalize investment amount
     input_data[['Investment Amount (USD)']] = scaler.transform(input_data[['Investment Amount (USD)']])
 
-    # Predict valuation
-    if st.button("Predict Valuation"):
+    # Style the prediction display
+    if st.button("Predict Valuation", key="predict_btn"):
         prediction = model.predict(input_data)[0]
-        valuation = np.expm1(prediction)  # Convert log valuation back to original scale
+        valuation = np.expm1(prediction)
 
-        st.success(f"Estimated Valuation in {target_year}: ${valuation:,.2f}")
+        st.markdown(f"""
+        <div style="background-color: #dbeafe; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h2 style="color: #1e3a8a; margin-bottom: 10px;">Estimated Valuation</h2>
+            <p style="color: #1e3a8a; font-size: 24px; font-weight: 600;">${valuation:,.2f}</p>
+            <p style="color: #1e3a8a;">Predicted for year {target_year}</p>
+        </div>
+        """, unsafe_allow_html=True)
 
         # Save result in session state
         st.session_state.valuation_history.append({
@@ -97,7 +168,11 @@ def show():
             "Predicted Valuation (USD)": f"${valuation:,.2f}"
         })
 
-    # Display valuation history
+    # Style the history table
     if st.session_state.valuation_history:
-        st.subheader("📊 Valuation History")
+        st.markdown("""
+        <div style="background-color: white; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; margin-top: 20px;">
+            <h2 style="color: #1e3a8a; margin-bottom: 15px;">📊 Valuation History</h2>
+        </div>
+        """, unsafe_allow_html=True)
         st.table(pd.DataFrame(st.session_state.valuation_history))

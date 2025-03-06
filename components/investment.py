@@ -33,6 +33,16 @@ def load_data():
     return df
 
 def show():
+    st.markdown("""
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Lora', serif;
+            font-size: 18px;
+        }
+    </style>
+    """, unsafe_allow_html=True)
     df = load_data()
 
     # Streamlit UI

@@ -1,5 +1,4 @@
 import os
-import asyncio
 import streamlit as st
 from together import Together
 from dotenv import load_dotenv
@@ -7,90 +6,65 @@ from dotenv import load_dotenv
 # Load API Key
 load_dotenv()
 api_key = os.getenv("TOGETHER_API_KEY")
-client = Together(api_key=api_key)
+together = Together(api_key=api_key)
+
+def get_ai_response(prompt):
+    try:
+        response = together.chat.completions.create(
+            model="meta-llama/Llama-3.3-70B-Instruct-Turbo",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=500,
+            temperature=0.7
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        st.error(f"Error getting response: {str(e)}")
+        return None
 
 def show():
-    st.title("🤖 Chatbot")
+    st.markdown("""
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap');
 
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
+        body {
+            font-family: 'Lora', serif;
+            font-size: 18px;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    st.markdown("""
+    <div style="background-color: white; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 20px;">
+        <h1 style="color: #1e3a8a; font-weight: 700; margin-bottom: 5px;">🤖 AI Assistant</h1>
+        <p style="color: #6b7280;">Ask anything about your startup or get help with your pitch.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    for msg in st.session_state.messages:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+    # Initialize chat history
+    if "chat_messages" not in st.session_state:
+        st.session_state.chat_messages = []
 
-    async def generate_detailed_pitch(user_input):
-        prompt = f"""
-        Create a *comprehensive, investor-ready pitch deck* for the business idea: *{user_input}*.
-        The deck should be *detailed, structured, and professional*. It must include:  
+    # Display chat messages
+    for message in st.session_state.chat_messages:
+        role = "User" if message['role'] == "user" else "AI"
+        st.markdown(f"**{role}:** {message['content']}")
 
-        ## 1️⃣ Problem Statement  
-        - What problem are you solving?  
-        - Who is affected by this problem?  
-        - How big is the problem (market pain points, data-driven insights)?  
+    # Chat input
+    prompt = st.text_input("Ask me anything about your startup:", key="chat_input")
 
-        ## 2️⃣ Solution  
-        - How does your product/service solve this problem?  
-        - What makes it unique?  
-        - Key features and value proposition.  
+    if st.button("Send", key="send_message") and prompt:
+        # Append user message
+        st.session_state.chat_messages.append({"role": "user", "content": prompt})
 
-        ## 3️⃣ Market Opportunity  
-        - Total Addressable Market (TAM), Serviceable Available Market (SAM), and Serviceable Obtainable Market (SOM).  
-        - Industry trends and market growth potential.  
+        # Get AI response
+        with st.spinner("🤖 Thinking..."):
+            ai_response = get_ai_response(prompt)
+            if ai_response:
+                st.session_state.chat_messages.append({"role": "ai", "content": ai_response})
 
-        ## 4️⃣ Business Model  
-        - How do you plan to make money?  
-        - Revenue model (subscription, one-time purchase, freemium, etc.).  
-        - Pricing strategy.  
+        # Reset text input
+        st.session_state.chat_input = ""
 
-        ## 5️⃣ Competitive Advantage  
-        - Who are your competitors?  
-        - What sets you apart? (Technology, branding, partnerships, network effects, etc.).  
-        - SWOT analysis (Strengths, Weaknesses, Opportunities, Threats).  
+    # Clear chat button
+    if st.button("Clear Chat", key="clear_chat"):
+        st.session_state.chat_messages = []
 
-        ## 6️⃣ Revenue Streams  
-        - Primary revenue sources.  
-        - Potential future monetization strategies.  
-
-        ## 7️⃣ Go-To-Market Strategy  
-        - How will you acquire customers? (Sales channels, digital marketing, partnerships, etc.).  
-        - Growth and scaling plans.  
-
-        ## 8️⃣ Team  
-        - Key team members (Co-founders, advisors, key hires).  
-        - Experience and relevant expertise.  
-
-        ## 9️⃣ Financial Projections  
-        - Projected revenue, costs, and profitability.  
-        - Breakeven point analysis.  
-        - Funding requirements and expected ROI.  
-
-        ## 🔟 Funding Requirements  
-        - How much capital do you need?  
-        - How will the funds be used? (Product development, marketing, hiring, etc.).  
-        - Potential return for investors.  
-
-        The response should be *professional, structured, and investor-friendly*.
-        """
-        
-        response = client.chat.completions.create(
-            model="meta-llama/Llama-3.3-70B-Instruct-Turbo",
-            messages=[{"role": "user", "content": prompt}]
-        )
-        
-        return response.choices[0].message.content
-
-    if user_input := st.chat_input("Describe your business idea..."):
-        st.session_state.messages.append({"role": "user", "content": user_input})
-        with st.chat_message("user"):
-            st.markdown(user_input)
-
-        with st.chat_message("assistant"):
-            with st.spinner("🤖 Thinking... Generating your investor-ready pitch deck..."):
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                pitch_response = loop.run_until_complete(generate_detailed_pitch(user_input))
-            
-            st.markdown(pitch_response)
-
-        st.session_state.messages.append({"role": "assistant", "content": pitch_response})
